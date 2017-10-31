@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard1.5</TargetFramework>
+    <RootNamespace>DSoft.ServiceRegistra</RootNamespace>
+    <AssemblyName>DSoft.ServiceRegistra</AssemblyName>
+  </PropertyGroup>
+
+</Project>
