@@ -5,14 +5,24 @@ using System.Linq;
 
 namespace ServiceRegistra
 {
+    /// <summary>
+    /// Dependency Injection and Service Management Implementation
+    /// </summary>
     public class ServiceRegistra
     {
-        Dictionary<Type, Type> services;
+        #region Fields
+
+        private Dictionary<Type, Type> services;
 
         private static Lazy<ServiceRegistra> instance = new Lazy<ServiceRegistra>(() => new ServiceRegistra());
 
+        #endregion
+
+        #region Properties
+
+
         /// <summary>
-        /// Shared instance
+        /// Shared instance of ServiceRegistra
         /// </summary>
         public static ServiceRegistra Instance
         {
@@ -22,14 +32,52 @@ namespace ServiceRegistra
             }
         }
 
+        public Dictionary<Type, Type> Services
+        {
+            get
+            {
+                return services;
+            }
+        }
+        #endregion
+
+        #region Constructor
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="T:ServiceRegistra.ServiceRegistra"/> class.
+        /// </summary>
+        private ServiceRegistra()
+        {
+            services = new Dictionary<Type, Type>();
+        }
+
+        #endregion
+
+        #region Methods
+
+       
+        /// <summary>
+        /// Register a service and its corresponding implementation
+        /// </summary>
+        /// <typeparam name="T">The service interface</typeparam>
+        /// <typeparam name="T2">The service implementation, must implement or be a subclass of the service definition</typeparam>
         public static void Register<T, T2>() where T2 : T
         {
             Register(typeof(T), typeof(T2));
 
         }
 
+        /// <summary>
+        /// Register a service and its corresponding implementation
+        /// </summary>
+        /// <returns>The register.</returns>
+        /// <param name="sInterface">The service interface type</param>
+        /// <param name="sImplementation">The service implementation</param>
         public static void Register(Type sInterface, Type sImplementation)
         {
+            if (!sInterface.GetTypeInfo().IsInterface)
+                throw new ArgumentException(String.Format("You cannot register {0} as a service interface in ServiceRegistra as it is not an interface", sInterface.FullName));
+
             if (Instance.services.ContainsKey(sInterface))
                 Instance.services[sInterface] = sImplementation;
             else
@@ -78,8 +126,8 @@ namespace ServiceRegistra
         /// <summary>
         /// Find the implementing service for the speficied interface
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
+        /// <typeparam name="T">The service interface</typeparam>
+        /// <returns>The implementation of the service interface</returns>
         public static T Service<T>()
         {
             var typ = typeof(T);
@@ -169,9 +217,6 @@ namespace ServiceRegistra
 
         }
 
-        public ServiceRegistra()
-        {
-            services = new Dictionary<Type, Type>();
-        }
+        #endregion
     }
 }
