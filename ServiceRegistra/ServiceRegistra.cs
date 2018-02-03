@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Linq;
 
-namespace ServiceRegistra
+namespace DSoft.ServiceRegistra
 {
     /// <summary>
     /// Dependency Injection and Service Management Implementation

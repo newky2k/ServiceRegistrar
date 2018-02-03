@@ -6,19 +6,23 @@
     <AssemblyName>DSoft.ServiceRegistra</AssemblyName>
     <PackOnBuild>true</PackOnBuild>
     <PackageId>dsoft.serviceregistra.core</PackageId>
-    <PackageVersion>1.0</PackageVersion>
+    <PackageVersion>1.0.1</PackageVersion>
     <Authors>newky2k</Authors>
+	<Copyright>dave humphreys 2017</Copyright>
     <PackageLicenseUrl>https://github.com/newky2k/serviceregistra/blob/master/LICENSE</PackageLicenseUrl>
     <Owners>newky2k</Owners>
     <PackageProjectUrl>https://github.com/newky2k/serviceregistra</PackageProjectUrl>
     <PackageReleaseNotes>Initial Release</PackageReleaseNotes>
     <Summary>Dependency Injection and Service registration system</Summary>
     <PackageTags>Dependecy Injection</PackageTags>
-    <Title>dsoft.serviceregistra.core</Title>
+    <Title>DSoft.ServiceRegistra.Core</Title>
     <Description>Dependency Injection and Service registration system</Description>
-    <ReleaseVersion>1.0</ReleaseVersion>
+    <ReleaseVersion>1.0.1</ReleaseVersion>
   </PropertyGroup>
 
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType></DebugType>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="NuGet.Build.Packaging" Version="0.2.1" />
   </ItemGroup>
