@@ -6,4 +6,4 @@ Features:
 
 * Simple service registration
 * Dependency injection of registered services
-* .Net Standard 1.5 
+* .Net Standard 2.0 

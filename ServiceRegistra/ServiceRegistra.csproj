@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard1.5</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <RootNamespace>DSoft.ServiceRegistra</RootNamespace>
     <AssemblyName>DSoft.ServiceRegistra</AssemblyName>
     <PackOnBuild>true</PackOnBuild>
@@ -12,12 +12,15 @@
     <PackageLicenseUrl>https://github.com/newky2k/serviceregistra/blob/master/LICENSE</PackageLicenseUrl>
     <Owners>newky2k</Owners>
     <PackageProjectUrl>https://github.com/newky2k/serviceregistra</PackageProjectUrl>
-    <PackageReleaseNotes>Initial Release</PackageReleaseNotes>
+    <PackageReleaseNotes>Updated to .Net Standard 2.0</PackageReleaseNotes>
     <Summary>Dependency Injection and Service registration system</Summary>
     <PackageTags>Dependecy Injection</PackageTags>
     <Title>DSoft.ServiceRegistra.Core</Title>
     <Description>Dependency Injection and Service registration system</Description>
     <ReleaseVersion>1.0.1</ReleaseVersion>
+    <Version>1.1</Version>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">

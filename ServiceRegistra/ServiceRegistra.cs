@@ -123,6 +123,64 @@ namespace DSoft.ServiceRegistra
             }
         }
 
+
+        /// <summary>
+        /// Register the calling assembly as the implementation assembly
+        /// </summary>
+        /// <typeparam name="T">A type within the interfaces assembly</typeparam>
+        public static void RegisterFromCallingAssembly<T>()
+        {
+            //find all the interfaces that implement the base interface first
+
+            var impAssembly = Assembly.GetCallingAssembly();
+
+            var siAssembly = typeof(T).GetTypeInfo().Assembly;
+
+            RegisterFromAssemblies(siAssembly, impAssembly);
+        }
+
+        /// <summary>
+        /// Register the calling assembly as the implementation assembly
+        /// </summary>
+        /// <param name="interfaces">the interfaces assembly</param>
+        public static void RegisterFromCallingAssembly(Assembly interfaces)
+        {
+            var assm = Assembly.GetCallingAssembly();
+
+            RegisterFromAssemblies(interfaces, assm);
+        }
+
+        public static void RegisterWithAutoDiscovery(Assembly[] assemblies)
+        {
+
+            var aUiprovider = typeof(IAutoDiscoverableProvider);
+
+            foreach (var aItem in assemblies)
+            {
+                var atypes = aItem.DefinedTypes.Where(x => aUiprovider.GetTypeInfo().IsAssignableFrom(x)).ToList();
+
+                foreach (var aImp in atypes)
+                {
+                    var interfacs = aImp.ImplementedInterfaces.Where(x => !x.GetTypeInfo().Equals(aUiprovider) && aUiprovider.GetTypeInfo().IsAssignableFrom(x.GetTypeInfo())).ToList();
+
+                    if (interfacs.Count == 1)
+                    {
+
+                        var firstInt = interfacs.FirstOrDefault();
+
+                        if (firstInt != null)
+                        {
+                            Register(firstInt, aImp.AsType());
+                        }
+
+                    }
+                }
+
+
+
+            }
+        }
+
         /// <summary>
         /// Find the implementing service for the speficied interface
         /// </summary>
