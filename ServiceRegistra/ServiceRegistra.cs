@@ -150,6 +150,10 @@ namespace DSoft.ServiceRegistra
             RegisterFromAssemblies(interfaces, assm);
         }
 
+        /// <summary>
+        /// Register the assmeblies array and auto-discover implementations of interfaces that inherit from IAutoDiscoverableProvider
+        /// </summary>
+        /// <param name="assemblies">Array of assemblies to work through</param>
         public static void RegisterWithAutoDiscovery(Assembly[] assemblies)
         {
 
@@ -179,6 +183,43 @@ namespace DSoft.ServiceRegistra
 
 
             }
+        }
+
+        /// <summary>
+        /// Register the assmebly and process referenced assemblie to auto-discover implementations of interfaces that inherit from IAutoDiscoverableProvider
+        /// 
+        /// Note: Linking may remove unused references so they will not loaded
+        /// </summary>
+        /// <param name="assm"></param>
+        public static void RegisterWithAutoDiscovery(Assembly assm)
+        {
+            var getAsssmMeths = assm.GetType().GetTypeInfo().GetDeclaredMethods("GetReferencedAssemblies").ToList();
+
+            if (getAsssmMeths == null && getAsssmMeths.Count == 0)
+                throw new Exception("Unable to call GetReferencedAssessmblies on the Assembly object passed to ProviderControl.InitFromAssembly");
+
+            var methods = getAsssmMeths.Where(x => x.IsPublic.Equals(true)).ToList();
+
+            if (methods.Count == 0)
+                throw new Exception("Unable to call the Public method GetReferencedAssessmblies on the Assembly object passed to ServiceRegistra.InitFromAssembly");
+
+            var firMethd = methods.First();
+
+            var assms = (AssemblyName[])firMethd.Invoke(assm, null);
+
+            var newAssms = new List<AssemblyName>() { assm.GetName() };
+            newAssms.AddRange(assms);
+
+            var loadedAssms = LoadAssemblies(newAssms);
+
+            RegisterWithAutoDiscovery(loadedAssms);
+        }
+
+        public static void RegisterWithAutoDiscovery()
+        {
+            var impAssembly = Assembly.GetCallingAssembly();
+
+            RegisterWithAutoDiscovery(impAssembly);
         }
 
         /// <summary>
@@ -275,6 +316,20 @@ namespace DSoft.ServiceRegistra
 
         }
 
+        private static Assembly[] LoadAssemblies(List<AssemblyName> assemblyNames)
+        {
+            var assemblies = new List<Assembly>();
+
+            foreach (var aItem in assemblyNames)
+            {
+
+                var asm = Assembly.Load(aItem);
+
+                assemblies.Add(asm);
+            }
+
+            return assemblies.ToArray();
+        }
         #endregion
     }
 }

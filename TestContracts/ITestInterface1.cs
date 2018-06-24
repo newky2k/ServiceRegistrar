@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace DSoft.ServiceRegistra
+namespace TestContracts
 {
-    public interface IAutoDiscoverableProvider
+    public interface ITestInterface1
     {
-
+        int TestInt();
     }
 }
