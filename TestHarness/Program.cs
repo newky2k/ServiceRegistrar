@@ -24,6 +24,9 @@ namespace TestHarness
 
             var result = serv.TestInt();
 
+            var serv2 = ServiceRegistra.Service<TestInterface3>(new object[] { serv });
+
+
             Console.WriteLine(result);
             Console.ReadLine();
         }
