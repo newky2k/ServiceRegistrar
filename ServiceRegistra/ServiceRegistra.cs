@@ -273,6 +273,48 @@ namespace DSoft.ServiceRegistra
         /// Find the implementing service for the speficied interface
         /// </summary>
         /// <typeparam name="T"></typeparam>
+        /// <param name="initObjects">Constructor parameter objects</param>
+        /// <returns></returns>
+        public static T Service<T>(object[] initObjects)
+        {
+            var typ = typeof(T);
+
+            if (!Instance.services.ContainsKey(typ))
+            {
+                throw new Exception(string.Format("There is no registered implementation for type: {0}", typ.FullName));
+            }
+
+            var imp = Instance.services[typ];
+
+            var conts = imp.GetTypeInfo().GetConstructors();
+
+            var cPars = new List<object>();
+
+            if (initObjects?.Length > 0 && conts.Length > 0)
+            {
+                foreach (var aConst in conts)
+                {
+                    var pars = aConst.GetParameters();
+
+                    if (pars.Length == initObjects.Length)
+                    {
+                        //this is the constrcutors that has the same number of paramets
+                        foreach (var aParam in initObjects)
+                            cPars.Add(aParam);
+                    }
+                }
+            }
+
+            var inst = (cPars.Count == 0) ? (T)Activator.CreateInstance(imp) : (T)Activator.CreateInstance(imp, cPars.ToArray());
+
+            return inst;
+
+        }
+
+        /// <summary>
+        /// Find the implementing service for the speficied interface
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
         /// <returns></returns>
         public static object Service(Type type)
         {
