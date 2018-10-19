@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -6,7 +6,7 @@
     <AssemblyName>DSoft.ServiceRegistra</AssemblyName>
     <PackOnBuild>true</PackOnBuild>
     <PackageId>dsoft.serviceregistra.core</PackageId>
-    <PackageVersion>1.0.1</PackageVersion>
+    <PackageVersion>1.2.0</PackageVersion>
     <Authors>newky2k</Authors>
 	<Copyright>dave humphreys 2017</Copyright>
     <PackageLicenseUrl>https://github.com/newky2k/serviceregistra/blob/master/LICENSE</PackageLicenseUrl>
@@ -17,8 +17,8 @@
     <PackageTags>Dependecy Injection</PackageTags>
     <Title>DSoft.ServiceRegistra.Core</Title>
     <Description>Dependency Injection and Service registration system</Description>
-    <ReleaseVersion>1.0.1</ReleaseVersion>
-    <Version>1.2.0.0</Version>
+    <ReleaseVersion>1.2.0</ReleaseVersion>
+    <Version>1.2.0</Version>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
   </PropertyGroup>
