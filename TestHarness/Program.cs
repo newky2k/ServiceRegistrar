@@ -19,15 +19,18 @@ namespace TestHarness
 
             ServiceRegistrar.Register<ITestInterface4, TestImplementation4>(obj =>
             {
-                ((TestImplementation4)obj).Message = "Hello, init!";
+                ((TestImplementation4)obj.Context).Message = "Hello, init!";
             });
 
             //this should call the constructor action
-            var serv4 = ServiceRegistrar.Service<ITestInterface4>();
-            serv4.DoAThing();
+
 
             ServiceRegistrar.RegisterWithAutoDiscovery(typeof(TestImplementation2).Assembly);
 
+            var serv4 = ServiceRegistrar.Service<ITestInterface4>();
+
+            serv4.DoAThing();
+            ServiceRegistrar.Service<ITestInterface4>().DoAThing();
 
             var imps = ServiceRegistrar.Instance.Services;
 

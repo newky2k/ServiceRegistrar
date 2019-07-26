@@ -13,8 +13,9 @@ namespace DSoft.ServiceRegistrar
         #region Fields
 
         private Dictionary<Type, Type> _services;
-        private Dictionary<Type, Action<object>> _constrcutorActions;
-
+        private Dictionary<Type, object> _cachedServices;
+        private Dictionary<Type, Action<ConstructorOptions>> _constructorActions;
+        private List<Type> _singleTons;
         protected static Lazy<ServiceRegistrar> _instance = new Lazy<ServiceRegistrar>(() => new ServiceRegistrar());
 
         #endregion
@@ -37,7 +38,21 @@ namespace DSoft.ServiceRegistrar
         {
             get
             {
+                if (_services == null)
+                    _services = new Dictionary<Type, Type>();
+
                 return _services;
+            }
+        }
+
+        public Dictionary<Type, object> CachedServices
+        {
+            get
+            {
+                if (_cachedServices == null)
+                    _cachedServices = new Dictionary<Type, object>();
+
+                return _cachedServices;
             }
         }
         #endregion
@@ -50,7 +65,8 @@ namespace DSoft.ServiceRegistrar
         protected ServiceRegistrar()
         {
             _services = new Dictionary<Type, Type>();
-            _constrcutorActions = new Dictionary<Type, Action<object>>();
+            _constructorActions = new Dictionary<Type, Action<ConstructorOptions>>();
+            _singleTons = new List<Type>();
         }
 
         #endregion
@@ -64,11 +80,25 @@ namespace DSoft.ServiceRegistrar
         /// </summary>
         /// <typeparam name="T">The service interface</typeparam>
         /// <typeparam name="T2">The service implementation, must implement or be a subclass of the service definition</typeparam>
-        public static void Register<T, T2>(Action<object> constructorAction = null) where T2 : T
+        /// <param name="constructorAction">The constructor action to call after the instance is created</param>
+        public static void Register<T, T2>(Action<ConstructorOptions> constructorAction = null) where T2 : T
+        {
+            Register(typeof(T), typeof(T2), constructorAction);
+        }
+
+        /// <summary>
+        /// Registers a singleton instance of the implementation.  The constructor action will be called the first time the services is requested
+        /// </summary>
+        /// <typeparam name="T">The service interface</typeparam>
+        /// <typeparam name="T2">The service implementation, must implement or be a subclass of the service definition</typeparam>
+        /// <param name="constructorAction">The constructor action to call after the instance is created</param>
+        public static void RegisterSingleTon<T, T2>(Action<ConstructorOptions> constructorAction = null) where T2 : T
         {
             Register(typeof(T), typeof(T2), constructorAction);
 
-
+            if (!Instance._singleTons.Contains(typeof(T)))
+                Instance._singleTons.Add(typeof(T));
+                
         }
 
         /// <summary>
@@ -77,7 +107,8 @@ namespace DSoft.ServiceRegistrar
         /// <returns>The register.</returns>
         /// <param name="sInterface">The service interface type</param>
         /// <param name="sImplementation">The service implementation</param>
-        public static void Register(Type sInterface, Type sImplementation, Action<object> constructorAction = null)
+        /// <param name="constructorAction">The constructor action to call after the instance is created</param>
+        public static void Register(Type sInterface, Type sImplementation, Action<ConstructorOptions> constructorAction = null)
         {
             if (!sInterface.GetTypeInfo().IsInterface)
                 throw new ArgumentException(String.Format("You cannot register {0} as a service interface in ServiceRegistrar as it is not an interface", sInterface.FullName));
@@ -89,10 +120,10 @@ namespace DSoft.ServiceRegistrar
 
             if (constructorAction != null)
             {
-                if (Instance._constrcutorActions.ContainsKey(sInterface))
-                    Instance._constrcutorActions[sInterface] = constructorAction;
+                if (Instance._constructorActions.ContainsKey(sInterface))
+                    Instance._constructorActions[sInterface] = constructorAction;
                 else
-                    Instance._constrcutorActions.Add(sInterface, constructorAction);
+                    Instance._constructorActions.Add(sInterface, constructorAction);
             }
 
 
@@ -246,25 +277,13 @@ namespace DSoft.ServiceRegistrar
 
         #region Service
 
-
-        /// <summary>
-        /// Find the implementing service for the speficied interface
-        /// </summary>
-        /// <typeparam name="T">The service interface</typeparam>
-        /// <returns>The implementation of the service interface</returns>
-        public static T Service<T>()
-        {
-            return Service<T>(null);
-
-        }
-
         /// <summary>
         /// Find the implementing service for the speficied interface
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="initObjects">Constructor parameter objects</param>
         /// <returns></returns>
-        public static T Service<T>(object[] initObjects)
+        public static T Service<T>(object[] initObjects = null)
         {
             var typ = typeof(T);
 
@@ -273,9 +292,14 @@ namespace DSoft.ServiceRegistrar
                 throw new Exception(string.Format("There is no registered implementation for type: {0}", typ.FullName));
             }
 
+            //check to see if there is a cached element
+            if (initObjects == null && Instance.CachedServices.ContainsKey(typ))
+                return (T)Instance.CachedServices[typ];
+
             var imp = Instance._services[typ];
 
             var conts = imp.GetTypeInfo().GetConstructors();
+            var cachedAttribute = imp.GetTypeInfo().GetCustomAttribute<CachedServiceAttribute>();
 
             var cPars = new List<object>();
 
@@ -319,11 +343,18 @@ namespace DSoft.ServiceRegistrar
             }
             var inst = (cPars.Count == 0) ? (T)Activator.CreateInstance(imp) : (T)Activator.CreateInstance(imp, cPars.ToArray());
 
-            if (Instance._constrcutorActions.ContainsKey(typ))
+            if (Instance._constructorActions.ContainsKey(typ))
             {
-                var action = Instance._constrcutorActions[typ];
-                action.Invoke(inst);
+                var action = Instance._constructorActions[typ];
+                action.Invoke(new ConstructorOptions()
+                {
+                    Context = inst
+                });
             }
+
+            //if the impementation is cached, but not yet stored in the cache then add it to the cache
+            if ((cachedAttribute != null || Instance._singleTons.Contains(typ)) && !Instance.CachedServices.ContainsKey(typ))
+                Instance.CachedServices.Add(typ, inst);
 
             return inst;
 
