@@ -13,6 +13,8 @@
     <RepositoryType>git</RepositoryType>
     <PackageTags>Dependecy Injection</PackageTags>
     <PackageReleaseNotes>Fixed naming typos and cleaned up comments</PackageReleaseNotes>
+    <FileVersion>1.3.0</FileVersion>
+    <AssemblyVersion>1.3.0</AssemblyVersion>
   </PropertyGroup>
 
 </Project>
