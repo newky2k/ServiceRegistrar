@@ -43,7 +43,7 @@ namespace DSoft.ServiceRegistrar
         #region Constructor
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="T:ServiceRegistra.ServiceRegistra"/> class.
+        /// Initializes a new instance of the <see cref="T:ServiceRegistra.ServiceRegistrar"/> class.
         /// </summary>
         protected ServiceRegistrar()
         {
@@ -54,7 +54,8 @@ namespace DSoft.ServiceRegistrar
 
         #region Methods
 
-       
+        #region Register
+
         /// <summary>
         /// Register a service and its corresponding implementation
         /// </summary>
@@ -64,6 +65,11 @@ namespace DSoft.ServiceRegistrar
         {
             Register(typeof(T), typeof(T2));
 
+        }
+
+        public static void Register<T,T2>(Action<T2> constructorAction)
+        {
+            Register(typeof(T), typeof(T2));
         }
 
         /// <summary>
@@ -82,7 +88,6 @@ namespace DSoft.ServiceRegistrar
             else
                 Instance._services.Add(sInterface, sImplementation);
         }
-
 
         /// <summary>
         /// Register service interfaces and implementations from the assemblies with the registra
@@ -122,11 +127,10 @@ namespace DSoft.ServiceRegistrar
             }
         }
 
-
         /// <summary>
         /// Register the calling assembly as the implementation assembly
         /// </summary>
-        /// <typeparam name="T">A type within the interfaces assembly</typeparam>
+        /// <typeparam name="T">The interface to find implementations of</typeparam>
         public static void RegisterFromCallingAssembly<T>()
         {
             //find all the interfaces that implement the base interface first
@@ -142,15 +146,15 @@ namespace DSoft.ServiceRegistrar
         /// Register the calling assembly as the implementation assembly
         /// </summary>
         /// <param name="interfaces">the interfaces assembly</param>
-        public static void RegisterFromCallingAssembly(Assembly interfaces)
+        public static void RegisterFromCallingAssembly(Assembly interfaceAssembly)
         {
             var assm = Assembly.GetCallingAssembly();
 
-            RegisterFromAssemblies(interfaces, assm);
+            RegisterFromAssemblies(interfaceAssembly, assm);
         }
 
         /// <summary>
-        /// Register the assmeblies array and auto-discover implementations of interfaces that inherit from IAutoDiscoverableProvider
+        /// Register the assmeblies array and auto-discovers implementations of interfaces that inherit from IAutoDiscoverableProvider
         /// </summary>
         /// <param name="assemblies">Array of assemblies to work through</param>
         public static void RegisterWithAutoDiscovery(Assembly[] assemblies)
@@ -160,23 +164,28 @@ namespace DSoft.ServiceRegistrar
 
             foreach (var aItem in assemblies)
             {
-                var atypes = aItem.DefinedTypes.Where(x => aUiprovider.GetTypeInfo().IsAssignableFrom(x)).ToList();
+                var dTypes = aItem.DefinedTypes;
+                var atypes = dTypes.Where(x => aUiprovider.GetTypeInfo().IsAssignableFrom(x)).ToList();
 
                 foreach (var aImp in atypes)
                 {
-                    var interfacs = aImp.ImplementedInterfaces.Where(x => !x.GetTypeInfo().Equals(aUiprovider) && aUiprovider.GetTypeInfo().IsAssignableFrom(x.GetTypeInfo())).ToList();
-
-                    if (interfacs.Count == 1)
+                    if (!aImp.IsInterface)
                     {
+                        var interfacs = aImp.ImplementedInterfaces.Where(x => !x.GetTypeInfo().Equals(aUiprovider) && aUiprovider.GetTypeInfo().IsAssignableFrom(x.GetTypeInfo())).ToList();
 
-                        var firstInt = interfacs.FirstOrDefault();
-
-                        if (firstInt != null)
+                        if (interfacs.Count > 0)
                         {
-                            Register(firstInt, aImp.AsType());
-                        }
 
+                            var firstInt = interfacs.FirstOrDefault();
+
+                            if (firstInt != null)
+                            {
+                                Register(firstInt, aImp.AsType());
+                            }
+
+                        }
                     }
+
                 }
 
 
@@ -214,12 +223,20 @@ namespace DSoft.ServiceRegistrar
             RegisterWithAutoDiscovery(loadedAssms);
         }
 
+        /// <summary>
+        /// Registers the calling assembly and auto-discovers implementations of interfaces that inherit from IAutoDiscoverableProvider
+        /// </summary>
         public static void RegisterWithAutoDiscovery()
         {
             var impAssembly = Assembly.GetCallingAssembly();
 
             RegisterWithAutoDiscovery(impAssembly);
         }
+
+        #endregion
+
+        #region Service
+
 
         /// <summary>
         /// Find the implementing service for the speficied interface
@@ -228,43 +245,7 @@ namespace DSoft.ServiceRegistrar
         /// <returns>The implementation of the service interface</returns>
         public static T Service<T>()
         {
-            var typ = typeof(T);
-
-            if (!Instance._services.ContainsKey(typ))
-            {
-                throw new Exception(string.Format("There is no registered implementation for type: {0}", typ.FullName));
-            }
-
-            var imp = Instance._services[typ];
-
-            var conts = imp.GetTypeInfo().GetConstructors();
-
-            var cPars = new List<object>();
-
-            if (conts.Length > 0)
-            {
-                var ctr = conts[0];
-
-                var pars = ctr.GetParameters();
-
-                if (pars.Length != 0)
-                {
-                    foreach (var aPar in pars)
-                    {
-                        var pType = aPar.ParameterType;
-
-                        var pImp = Service(pType);
-
-                        if (pImp != null)
-                            cPars.Add(pImp);
-                    }
-                }
-
-            }
-
-            var inst = (cPars.Count == 0) ? (T)Activator.CreateInstance(imp) : (T)Activator.CreateInstance(imp, cPars.ToArray());
-
-            return inst;
+            return Service<T>(null);
 
         }
 
@@ -289,21 +270,44 @@ namespace DSoft.ServiceRegistrar
 
             var cPars = new List<object>();
 
-            if (initObjects?.Length > 0 && conts.Length > 0)
+            if (conts.Length > 0)
             {
-                foreach (var aConst in conts)
+                if (initObjects?.Length > 0)
                 {
-                    var pars = aConst.GetParameters();
-
-                    if (pars.Length == initObjects.Length)
+                    foreach (var aConst in conts)
                     {
-                        //this is the constrcutors that has the same number of paramets
-                        foreach (var aParam in initObjects)
-                            cPars.Add(aParam);
+                        var pars = aConst.GetParameters();
+
+                        if (pars.Length == initObjects.Length)  //TODO:  Should probably check the type of the parameters as well where the number of parameters is the same
+                        {
+                            //this is the constructor that has the same number of parameters as the initilization objects
+                            foreach (var aParam in initObjects)
+                                cPars.Add(aParam);
+                        }
                     }
                 }
-            }
+                else
+                {
+                    var ctr = conts[0];
 
+                    var pars = ctr.GetParameters();
+
+                    if (pars.Length != 0)
+                    {
+                        foreach (var aPar in pars)
+                        {
+                            var pType = aPar.ParameterType;
+
+                            //see if there is an implementation of the type for the parameter of the consturctor
+                            var pImp = Service(pType);
+
+                            if (pImp != null)
+                                cPars.Add(pImp); //add as a parameter
+                        }
+                    }
+                }
+
+            }
             var inst = (cPars.Count == 0) ? (T)Activator.CreateInstance(imp) : (T)Activator.CreateInstance(imp, cPars.ToArray());
 
             return inst;
@@ -371,6 +375,8 @@ namespace DSoft.ServiceRegistrar
 
             return assemblies.ToArray();
         }
+
+        #endregion
         #endregion
     }
 }

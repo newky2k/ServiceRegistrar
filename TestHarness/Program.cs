@@ -1,4 +1,5 @@
 ﻿using DSoft.ServiceRegistra;
+using DSoft.ServiceRegistrar;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,7 +17,13 @@ namespace TestHarness
         {
             //var assm = new List<Assembly>() { typeof(TestImplementation2).Assembly  };
 
+            ServiceRegistrar.Register<ITestInterface4, TestImplementation4>(options =>
+            {
+                options.Message = "Hello, init!";
+            });
+
             ServiceRegistra.RegisterWithAutoDiscovery(typeof(TestImplementation2).Assembly);
+
 
             var imps = ServiceRegistra.Instance.Services;
 

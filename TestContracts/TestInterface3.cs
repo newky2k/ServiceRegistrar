@@ -1,4 +1,4 @@
-﻿using DSoft.ServiceRegistra;
+﻿using DSoft.ServiceRegistrar;
 using System;
 using System.Collections.Generic;
 using System.Text;
