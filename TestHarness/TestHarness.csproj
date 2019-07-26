@@ -49,6 +49,10 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\DSoft.ServiceRegistrar\DSoft.ServiceRegistrar.csproj">
+      <Project>{6AC06E6E-198B-4FE3-9BB6-365ACE30BBBB}</Project>
+      <Name>DSoft.ServiceRegistrar</Name>
+    </ProjectReference>
     <ProjectReference Include="..\ServiceRegistra\ServiceRegistra.csproj">
       <Project>{1E0BA33C-AAC5-4C96-8134-26A88CA80E40}</Project>
       <Name>ServiceRegistra</Name>

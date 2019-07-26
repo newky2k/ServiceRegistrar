@@ -8,25 +8,30 @@
     <PackageId>dsoft.serviceregistra.core</PackageId>
     <PackageVersion>1.2.0</PackageVersion>
     <Authors>newky2k</Authors>
-	<Copyright>dave humphreys 2017</Copyright>
-    <PackageLicenseUrl>https://github.com/newky2k/serviceregistra/blob/master/LICENSE</PackageLicenseUrl>
+	<Copyright>Copyright © 2019 DSoft</Copyright>
+    <PackageLicenseUrl></PackageLicenseUrl>
     <Owners>newky2k</Owners>
     <PackageProjectUrl>https://github.com/newky2k/serviceregistra</PackageProjectUrl>
-    <PackageReleaseNotes>Updated to .Net Standard 2.0</PackageReleaseNotes>
+    <PackageReleaseNotes>### NOTE: You should now use DSoft.ServiceRegistrar instead ####
+
+Fixed naming typos and cleaned up comments
+
+</PackageReleaseNotes>
     <Summary>Dependency Injection and Service registration system</Summary>
     <PackageTags>Dependecy Injection</PackageTags>
     <Title>DSoft.ServiceRegistra.Core</Title>
     <Description>Dependency Injection and Service registration system</Description>
     <ReleaseVersion>1.2.0</ReleaseVersion>
-    <Version>1.2.0</Version>
+    <Version>1.2.1</Version>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType></DebugType>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="NuGet.Build.Packaging" Version="0.2.1" />
+    <ProjectReference Include="..\DSoft.ServiceRegistrar\DSoft.ServiceRegistrar.csproj" />
   </ItemGroup>
 </Project>

@@ -4,7 +4,8 @@ using System.Text;
 
 namespace DSoft.ServiceRegistra
 {
-    public interface IAutoDiscoverableProvider
+    [Obsolete("Use DSoft.ServiceRegistrar.IAutoDiscoverableProvider instead")]
+    public interface IAutoDiscoverableProvider : DSoft.ServiceRegistrar.IAutoDiscoverableProvider
     {
 
     }
