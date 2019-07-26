@@ -8,8 +8,8 @@
     <Description>Dependency Injection and Service registration system</Description>
     <Copyright>Copyright © 2019 DSoft</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/newky2k/serviceregistra</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/newky2k/serviceregistra</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/newky2k/ServiceRegistrar</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/newky2k/ServiceRegistrar</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>Dependecy Injection</PackageTags>
     <PackageReleaseNotes>Fixed naming typos and cleaned up comments</PackageReleaseNotes>
