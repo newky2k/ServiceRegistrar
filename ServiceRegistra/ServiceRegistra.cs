@@ -5,6 +5,7 @@ using System.Linq;
 
 namespace DSoft.ServiceRegistra
 {
+    [Obsolete("Use DSoft.ServiceRegistrar.ServiceRegistrar in the DSoft.ServiceRegistrar package instead")]
     /// <summary>
     /// Dependency Injection and Service Management Container
     /// </summary>

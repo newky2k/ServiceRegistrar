@@ -22,16 +22,16 @@ namespace TestHarness
                 options.Message = "Hello, init!";
             });
 
-            ServiceRegistra.RegisterWithAutoDiscovery(typeof(TestImplementation2).Assembly);
+            ServiceRegistrar.RegisterWithAutoDiscovery(typeof(TestImplementation2).Assembly);
 
 
-            var imps = ServiceRegistra.Instance.Services;
+            var imps = ServiceRegistrar.Instance.Services;
 
-            var serv = ServiceRegistra.Service<ITestInterface2>();
+            var serv = ServiceRegistrar.Service<ITestInterface2>();
 
             var result = serv.TestInt();
 
-            var serv2 = ServiceRegistra.Service<TestInterface3>(new object[] { serv });
+            var serv2 = ServiceRegistrar.Service<TestInterface3>(new object[] { serv });
 
 
             Console.WriteLine(result);
