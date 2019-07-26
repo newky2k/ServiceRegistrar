@@ -13,6 +13,8 @@ namespace DSoft.ServiceRegistrar
         #region Fields
 
         private Dictionary<Type, Type> _services;
+        private Dictionary<Type, Action<object>> _constrcutorActions;
+
         protected static Lazy<ServiceRegistrar> _instance = new Lazy<ServiceRegistrar>(() => new ServiceRegistrar());
 
         #endregion
@@ -48,6 +50,7 @@ namespace DSoft.ServiceRegistrar
         protected ServiceRegistrar()
         {
             _services = new Dictionary<Type, Type>();
+            _constrcutorActions = new Dictionary<Type, Action<object>>();
         }
 
         #endregion
@@ -61,15 +64,11 @@ namespace DSoft.ServiceRegistrar
         /// </summary>
         /// <typeparam name="T">The service interface</typeparam>
         /// <typeparam name="T2">The service implementation, must implement or be a subclass of the service definition</typeparam>
-        public static void Register<T, T2>() where T2 : T
+        public static void Register<T, T2>(Action<object> constructorAction = null) where T2 : T
         {
-            Register(typeof(T), typeof(T2));
+            Register(typeof(T), typeof(T2), constructorAction);
 
-        }
 
-        public static void Register<T,T2>(Action<T2> constructorAction)
-        {
-            Register(typeof(T), typeof(T2));
         }
 
         /// <summary>
@@ -78,15 +77,25 @@ namespace DSoft.ServiceRegistrar
         /// <returns>The register.</returns>
         /// <param name="sInterface">The service interface type</param>
         /// <param name="sImplementation">The service implementation</param>
-        public static void Register(Type sInterface, Type sImplementation)
+        public static void Register(Type sInterface, Type sImplementation, Action<object> constructorAction = null)
         {
             if (!sInterface.GetTypeInfo().IsInterface)
-                throw new ArgumentException(String.Format("You cannot register {0} as a service interface in ServiceRegistra as it is not an interface", sInterface.FullName));
+                throw new ArgumentException(String.Format("You cannot register {0} as a service interface in ServiceRegistrar as it is not an interface", sInterface.FullName));
 
             if (Instance._services.ContainsKey(sInterface))
                 Instance._services[sInterface] = sImplementation;
             else
                 Instance._services.Add(sInterface, sImplementation);
+
+            if (constructorAction != null)
+            {
+                if (Instance._constrcutorActions.ContainsKey(sInterface))
+                    Instance._constrcutorActions[sInterface] = constructorAction;
+                else
+                    Instance._constrcutorActions.Add(sInterface, constructorAction);
+            }
+
+
         }
 
         /// <summary>
@@ -209,7 +218,7 @@ namespace DSoft.ServiceRegistrar
             var methods = getAsssmMeths.Where(x => x.IsPublic.Equals(true)).ToList();
 
             if (methods.Count == 0)
-                throw new Exception("Unable to call the Public method GetReferencedAssessmblies on the Assembly object passed to ServiceRegistra.InitFromAssembly");
+                throw new Exception("Unable to call the Public method GetReferencedAssessmblies on the Assembly object passed to ServiceRegistrar.InitFromAssembly");
 
             var firMethd = methods.First();
 
@@ -309,6 +318,12 @@ namespace DSoft.ServiceRegistrar
 
             }
             var inst = (cPars.Count == 0) ? (T)Activator.CreateInstance(imp) : (T)Activator.CreateInstance(imp, cPars.ToArray());
+
+            if (Instance._constrcutorActions.ContainsKey(typ))
+            {
+                var action = Instance._constrcutorActions[typ];
+                action.Invoke(inst);
+            }
 
             return inst;
 

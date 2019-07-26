@@ -17,10 +17,14 @@ namespace TestHarness
         {
             //var assm = new List<Assembly>() { typeof(TestImplementation2).Assembly  };
 
-            ServiceRegistrar.Register<ITestInterface4, TestImplementation4>(options =>
+            ServiceRegistrar.Register<ITestInterface4, TestImplementation4>(obj =>
             {
-                options.Message = "Hello, init!";
+                ((TestImplementation4)obj).Message = "Hello, init!";
             });
+
+            //this should call the constructor action
+            var serv4 = ServiceRegistrar.Service<ITestInterface4>();
+            serv4.DoAThing();
 
             ServiceRegistrar.RegisterWithAutoDiscovery(typeof(TestImplementation2).Assembly);
 
