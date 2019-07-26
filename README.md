@@ -88,7 +88,7 @@ You can also pass through initialisation objects that can be passed to a matchin
 *If the service is a singleton and a post-construcion action is defined, it will be executed the first time the implementation is instantiated.*
 
 ### Dependency Injection
-ServiceRegistrar can inject dependencies on the other interface implementations, but only under the following conditions.
+ServiceRegistrar can inject dependencies from other registered interface implementations, but only under the following conditions.
 
 - There can be only one constructor on the implementing class of the service being requested
   - It can have more than one parameter but they must be references to other registered interfaces
