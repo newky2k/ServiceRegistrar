@@ -6,7 +6,7 @@ namespace DSoft.ServiceRegistrar
 {
 
     [AttributeUsage(AttributeTargets.Class)]
-    public class CachedServiceAttribute : Attribute
+    public class SingletonServiceAttribute : Attribute
     {
 
     }

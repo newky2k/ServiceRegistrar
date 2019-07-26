@@ -299,7 +299,7 @@ namespace DSoft.ServiceRegistrar
             var imp = Instance._services[typ];
 
             var conts = imp.GetTypeInfo().GetConstructors();
-            var cachedAttribute = imp.GetTypeInfo().GetCustomAttribute<CachedServiceAttribute>();
+            var cachedAttribute = imp.GetTypeInfo().GetCustomAttribute<SingletonServiceAttribute>();
 
             var cPars = new List<object>();
 
