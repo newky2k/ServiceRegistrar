@@ -1,4 +1,4 @@
-# DSoft.ServiceRegistrar.Core
+# DSoft.ServiceRegistrar
 
 Dependency injection and service registration container
 
