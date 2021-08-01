@@ -12,10 +12,10 @@ namespace DSoft.ServiceRegistrar
     {
         #region Fields
 
-        private Dictionary<Type, Type> _services;
-        private Dictionary<Type, object> _cachedServices;
-        private Dictionary<Type, Action<ConstructorOptions>> _constructorActions;
-        private List<Type> _singleTons;
+        private Dictionary<Type, Type> _services = new Dictionary<Type, Type>();
+        private Dictionary<Type, object> _cachedServices = new Dictionary<Type, object>();
+        private Dictionary<Type, Action<object>> _constructorActions=  new Dictionary<Type, Action<object>>();
+        private List<Type> _singleTons = new List<Type>();
         protected static Lazy<ServiceRegistrar> _instance = new Lazy<ServiceRegistrar>(() => new ServiceRegistrar());
 
         #endregion
@@ -26,48 +26,11 @@ namespace DSoft.ServiceRegistrar
         /// <summary>
         /// Shared instance of ServiceRegistra
         /// </summary>
-        public static ServiceRegistrar Instance
-        {
-            get
-            {
-                return _instance.Value;
-            }
-        }
+        public static ServiceRegistrar Instance => _instance.Value;
 
-        public Dictionary<Type, Type> Services
-        {
-            get
-            {
-                if (_services == null)
-                    _services = new Dictionary<Type, Type>();
+        public Dictionary<Type, Type> Services => _services;
 
-                return _services;
-            }
-        }
-
-        public Dictionary<Type, object> CachedServices
-        {
-            get
-            {
-                if (_cachedServices == null)
-                    _cachedServices = new Dictionary<Type, object>();
-
-                return _cachedServices;
-            }
-        }
-        #endregion
-
-        #region Constructor
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="T:ServiceRegistra.ServiceRegistrar"/> class.
-        /// </summary>
-        protected ServiceRegistrar()
-        {
-            _services = new Dictionary<Type, Type>();
-            _constructorActions = new Dictionary<Type, Action<ConstructorOptions>>();
-            _singleTons = new List<Type>();
-        }
+        public Dictionary<Type, object> CachedServices => _cachedServices;
 
         #endregion
 
@@ -81,9 +44,11 @@ namespace DSoft.ServiceRegistrar
         /// <typeparam name="T">The service interface</typeparam>
         /// <typeparam name="T2">The service implementation, must implement or be a subclass of the service definition</typeparam>
         /// <param name="constructorAction">The constructor action to call after the instance is created</param>
-        public static void Register<T, T2>(Action<ConstructorOptions> constructorAction = null) where T2 : T
+        public static void Register<T, T2>(Action<T2> constructorAction = null) where T2 : T
         {
-            Register(typeof(T), typeof(T2), constructorAction);
+            var executor = new Action<object>((obj) => { constructorAction((T2)obj);});
+
+            Register(typeof(T), typeof(T2), executor);
         }
 
         /// <summary>
@@ -92,41 +57,16 @@ namespace DSoft.ServiceRegistrar
         /// <typeparam name="T">The service interface</typeparam>
         /// <typeparam name="T2">The service implementation, must implement or be a subclass of the service definition</typeparam>
         /// <param name="constructorAction">The constructor action to call after the instance is created</param>
-        public static void RegisterSingleTon<T, T2>(Action<ConstructorOptions> constructorAction = null) where T2 : T
+        public static void RegisterSingleTon<T, T2>(Action<T2> constructorAction = null) where T2 : T
         {
-            Register(typeof(T), typeof(T2), constructorAction);
+            var executor = new Action<object>((obj) => { constructorAction((T2)obj); });
+
+
+            Register(typeof(T), typeof(T2), executor);
 
             if (!Instance._singleTons.Contains(typeof(T)))
                 Instance._singleTons.Add(typeof(T));
                 
-        }
-
-        /// <summary>
-        /// Register a service and its corresponding implementation
-        /// </summary>
-        /// <returns>The register.</returns>
-        /// <param name="sInterface">The service interface type</param>
-        /// <param name="sImplementation">The service implementation</param>
-        /// <param name="constructorAction">The constructor action to call after the instance is created</param>
-        public static void Register(Type sInterface, Type sImplementation, Action<ConstructorOptions> constructorAction = null)
-        {
-            if (!sInterface.GetTypeInfo().IsInterface)
-                throw new ArgumentException(String.Format("You cannot register {0} as a service interface in ServiceRegistrar as it is not an interface", sInterface.FullName));
-
-            if (Instance._services.ContainsKey(sInterface))
-                Instance._services[sInterface] = sImplementation;
-            else
-                Instance._services.Add(sInterface, sImplementation);
-
-            if (constructorAction != null)
-            {
-                if (Instance._constructorActions.ContainsKey(sInterface))
-                    Instance._constructorActions[sInterface] = constructorAction;
-                else
-                    Instance._constructorActions.Add(sInterface, constructorAction);
-            }
-
-
         }
 
         /// <summary>
@@ -244,12 +184,12 @@ namespace DSoft.ServiceRegistrar
             var getAsssmMeths = assm.GetType().GetTypeInfo().GetDeclaredMethods("GetReferencedAssemblies").ToList();
 
             if (getAsssmMeths == null && getAsssmMeths.Count == 0)
-                throw new Exception("Unable to call GetReferencedAssessmblies on the Assembly object passed to ProviderControl.InitFromAssembly");
+                throw new Exception("Unable to call GetReferencedAssessmblies on the Assembly object passed to ServiceRegistrar.RegisterWithAutoDiscovery");
 
             var methods = getAsssmMeths.Where(x => x.IsPublic.Equals(true)).ToList();
 
             if (methods.Count == 0)
-                throw new Exception("Unable to call the Public method GetReferencedAssessmblies on the Assembly object passed to ServiceRegistrar.InitFromAssembly");
+                throw new Exception("Unable to call the Public method GetReferencedAssessmblies on the Assembly object passed to ServiceRegistrar.RegisterWithAutoDiscovery");
 
             var firMethd = methods.First();
 
@@ -420,6 +360,38 @@ namespace DSoft.ServiceRegistrar
             }
 
             return assemblies.ToArray();
+        }
+
+        #endregion
+
+        #region Private
+
+        /// <summary>
+        /// Register a service and its corresponding implementation
+        /// </summary>
+        /// <returns>The register.</returns>
+        /// <param name="sInterface">The service interface type</param>
+        /// <param name="sImplementation">The service implementation</param>
+        /// <param name="constructorAction">The constructor action to call after the instance is created</param>
+        private static void Register(Type sInterface, Type sImplementation, Action<object> constructorAction = null)
+        {
+            if (!sInterface.GetTypeInfo().IsInterface)
+                throw new ArgumentException(String.Format("You cannot register {0} as a service interface in ServiceRegistrar as it is not an interface", sInterface.FullName));
+
+            if (Instance._services.ContainsKey(sInterface))
+                Instance._services[sInterface] = sImplementation;
+            else
+                Instance._services.Add(sInterface, sImplementation);
+
+            if (constructorAction != null)
+            {
+                if (Instance._constructorActions.ContainsKey(sInterface))
+                    Instance._constructorActions[sInterface] = constructorAction;
+                else
+                    Instance._constructorActions.Add(sInterface, constructorAction);
+            }
+
+
         }
 
         #endregion
