@@ -1,7 +1,9 @@
-﻿using System;
+﻿using DSoft.ServiceRegistrar;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using TestContracts;
+using TestImplementations;
 
 namespace TestImplementations
 {

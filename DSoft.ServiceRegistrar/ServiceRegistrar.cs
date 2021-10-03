@@ -10,238 +10,250 @@ namespace DSoft.ServiceRegistrar
     /// </summary>
     public class ServiceRegistrar
     {
+
         #region Fields
+        /// <summary>
+        /// Stored instances of the 
+        /// </summary>
+        private static Dictionary<Type, object> _cachedServices { get; set; } = new Dictionary<Type, object>();
 
-        private Dictionary<Type, Type> _services = new Dictionary<Type, Type>();
-        private Dictionary<Type, object> _cachedServices = new Dictionary<Type, object>();
-        private Dictionary<Type, Action<object>> _constructorActions=  new Dictionary<Type, Action<object>>();
-        private List<Type> _singleTons = new List<Type>();
-        protected static Lazy<ServiceRegistrar> _instance = new Lazy<ServiceRegistrar>(() => new ServiceRegistrar());
+        private static Dictionary<Type, Type> _explicitlyTypedServices { get; set; } = new Dictionary<Type, Type>();
+
+        private static Dictionary<Type, Action<object>> _constructorActions = new Dictionary<Type, Action<object>>();
+        /// <summary>
+        /// Register types
+        /// </summary>
+        private static List<Type> _serviceTypes { get; set; } = new List<Type>();
 
         #endregion
 
-        #region Properties
-
-
-        /// <summary>
-        /// Shared instance of ServiceRegistra
-        /// </summary>
-        public static ServiceRegistrar Instance => _instance.Value;
-
-        public Dictionary<Type, Type> Services => _services;
-
-        public Dictionary<Type, object> CachedServices => _cachedServices;
-
-        #endregion
-
-        #region Methods
-
-        #region Register
+        #region Public members
 
         /// <summary>
-        /// Register a service and its corresponding implementation
+        /// Registers all services marked with the DiscoverableService attribute in the specified assemblies
         /// </summary>
-        /// <typeparam name="T">The service interface</typeparam>
-        /// <typeparam name="T2">The service implementation, must implement or be a subclass of the service definition</typeparam>
-        /// <param name="constructorAction">The constructor action to call after the instance is created</param>
-        public static void Register<T, T2>(Action<T2> constructorAction = null) where T2 : class, T
+        public static void Register()
         {
+            var assm = Assembly.GetCallingAssembly();
+
+            LoadServices(new Assembly[] { assm });
+        }
+
+        /// <summary>
+        /// Register a service instance
+        /// </summary>
+        /// <typeparam name="T">Service implementation type</typeparam>
+        public static void Register<T>(Action<T> postConstructionAction = null) where T : class, new()
+        {
+            var newType = typeof(T);
+
             Action<object> executor = null;
 
-            if (constructorAction != null)
-                executor = new Action<object>((obj) => { constructorAction((T2)obj);});
+            if (postConstructionAction != null)
+                executor = new Action<object>((obj) => { postConstructionAction((T)obj); });
 
-            Register(typeof(T), typeof(T2), executor);
+            AddService(newType, postConstructionAction: executor);
+
         }
 
         /// <summary>
-        /// Registers a singleton instance of the implementation.  The constructor action will be called the first time the services is requested
+        /// Registers the interface and implementation type
         /// </summary>
-        /// <typeparam name="T">The service interface</typeparam>
-        /// <typeparam name="T2">The service implementation, must implement or be a subclass of the service definition</typeparam>
-        /// <param name="constructorAction">The constructor action to call after the instance is created</param>
-        public static void RegisterSingleTon<T, T2>(Action<T2> constructorAction = null) where T2 : class, T
+        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="T2">The type of the 2.</typeparam>
+        /// <exception cref="Exception">The first type must be an interface when calling Resgister<T,T2></exception>
+        public static void Register<T, T2>(Action<T2> postConstructionAction = null) where T2 : class, new()
         {
+            var interfaceType = typeof(T);
+
+            if (!interfaceType.IsInterface)
+                throw new Exception("The first type must be an interface when calling Register<T,T2>");
+
+
+            var implementationType = typeof(T2);
+
             Action<object> executor = null;
 
-            if (constructorAction != null)
-                executor = new Action<object>((obj) => { constructorAction((T2)obj); });
+            if (postConstructionAction != null)
+                executor = new Action<object>((obj) => { postConstructionAction((T2)obj); });
 
-            Register(typeof(T), typeof(T2), executor);
+            AddService(implementationType, interfaceType, executor);
 
-            if (!Instance._singleTons.Contains(typeof(T)))
-                Instance._singleTons.Add(typeof(T));
-                
         }
 
         /// <summary>
-        /// Register service interfaces and implementations from the assemblies with the registra
+        /// Register all services marked with the DiscoverableService attribute in the specified assemblies
         /// </summary>
-        /// <typeparam name="T">A type from the assembly with the service interfaces</typeparam>
-        /// <typeparam name="T2">A type from the assembly with the service implmentations</typeparam>
-        public static void RegisterFromAssemblies<T, T2>() => RegisterFromAssemblies(typeof(T).GetTypeInfo().Assembly, typeof(T2).GetTypeInfo().Assembly);
-
-        /// <summary>
-        /// Register service interfaces and implementations from the assemblies with the registra
-        /// </summary>
-        /// <param name="interfaces">The assembly with the service interfaces</param>
-        /// <param name="implementations">The assembly with the service implmentations</param>
-        public static void RegisterFromAssemblies(Assembly interfaces, Assembly implementations)
+        /// <param name="assemblies">Array of external assemblies</param>
+        public static void Register(params Assembly[] assemblies)
         {
-            var servInterfaces = interfaces.GetTypes().Where(x => x.GetTypeInfo().IsInterface).ToList();
+            var assms = new List<Assembly>() { Assembly.GetCallingAssembly() };
 
-
-            foreach (var siType in servInterfaces)
+            if (assemblies != null && assemblies.Length > 0)
             {
-                //then find all of the first implementation in the provided assembly
-                var impltype = implementations.GetTypes().FirstOrDefault(x => siType.GetTypeInfo().IsAssignableFrom(x));
-
-                if (impltype != null)
+                foreach (var aAssm in assemblies)
                 {
-                    //yay!, register
-                    Register(siType, impltype);
+                    if (!assms.Contains(aAssm))
+                        assms.Add(aAssm);
                 }
-
             }
+
+            LoadServices(assms);
         }
 
         /// <summary>
-        /// Register the calling assembly as the implementation assembly
+        ///  Register all Services in the assemblies conatining the specified types
         /// </summary>
-        /// <typeparam name="T">The interface to find implementations of</typeparam>
-        public static void RegisterFromCallingAssembly<T>() => RegisterFromAssemblies(typeof(T).GetTypeInfo().Assembly, Assembly.GetCallingAssembly());
-
-        /// <summary>
-        /// Register the calling assembly as the implementation assembly
-        /// </summary>
-        /// <param name="interfaces">the interfaces assembly</param>
-        public static void RegisterFromCallingAssembly(Assembly interfaceAssembly) => RegisterFromAssemblies(interfaceAssembly, Assembly.GetCallingAssembly());
-
-
-
-        /// <summary>
-        /// Register the assmebly and process referenced assemblie to auto-discover implementations of interfaces that inherit from IAutoDiscoverableProvider
-        /// 
-        /// Note: Linking may remove unused references so they will not loaded
-        /// </summary>
-        /// <param name="assm"></param>
-        public static void RegisterWithAutoDiscovery(Assembly assm)
+        /// <param name="types">Types to process in external assemblies</param>
+        public static void Register(params Type[] types)
         {
-            var getAsssmMeths = assm.GetType().GetTypeInfo().GetDeclaredMethods("GetReferencedAssemblies").ToList();
-
-            if (getAsssmMeths == null && getAsssmMeths.Count == 0)
-                throw new Exception("Unable to call GetReferencedAssessmblies on the Assembly object passed to ServiceRegistrar.RegisterWithAutoDiscovery");
-
-            var methods = getAsssmMeths.Where(x => x.IsPublic.Equals(true)).ToList();
-
-            if (methods.Count == 0)
-                throw new Exception("Unable to call the Public method GetReferencedAssessmblies on the Assembly object passed to ServiceRegistrar.RegisterWithAutoDiscovery");
-
-            var firMethd = methods.First();
-
-            var assms = (AssemblyName[])firMethd.Invoke(assm, null);
-
-            var newAssms = new List<AssemblyName>() { assm.GetName() };
-            newAssms.AddRange(assms);
-
-            var loadedAssms = LoadAssemblies(newAssms);
-
-            RegisterWithAutoDiscovery(loadedAssms);
+            foreach (var type in types)
+                AddService(type);
         }
 
         /// <summary>
-        /// Registers the calling assembly and auto-discovers implementations of interfaces that inherit from IAutoDiscoverableProvider
+        /// Get a service implementation
         /// </summary>
-        public static void RegisterWithAutoDiscovery() => RegisterWithAutoDiscovery(Assembly.GetCallingAssembly());
-
-        /// <summary>
-        /// Register the assmeblies array and auto-discovers implementations of interfaces that inherit from IAutoDiscoverableProvider
-        /// </summary>
-        /// <param name="assemblies">Array of assemblies to work through</param>
-        public static void RegisterWithAutoDiscovery(Assembly[] assemblies)
+        /// <typeparam name="T">The inherited type</typeparam>
+        /// <param name="initObjects">The initialization objects, instead of dependency injection</param>
+        /// <returns></returns>
+        public static T Get<T>(object[] initObjects = null)
         {
+            var type = FindImplementation<T>();
 
-            var aUiprovider = typeof(IAutoDiscoverableProvider);
+            //if the implentation type is null then it must not have been rergistered so through an error
+            if (type == null)
+                throw new Exception(string.Format("There is no registered implementation for type: {0}", typeof(T).Name));
 
-            foreach (var aItem in assemblies)
+            var cachedAttribute = type.GetTypeInfo().GetCustomAttribute<SingletonServiceAttribute>();
+
+            if (cachedAttribute == null)
+                return CreateInstance<T>(type, initObjects);
+
+            if (_cachedServices.ContainsKey(type))
             {
-                var dTypes = aItem.DefinedTypes;
-                var atypes = dTypes.Where(x => aUiprovider.GetTypeInfo().IsAssignableFrom(x)).ToList();
-
-                foreach (var aImp in atypes)
-                {
-                    if (!aImp.IsInterface)
-                    {
-                        var interfacs = aImp.ImplementedInterfaces.Where(x => !x.GetTypeInfo().Equals(aUiprovider) && aUiprovider.GetTypeInfo().IsAssignableFrom(x.GetTypeInfo())).ToList();
-
-                        if (interfacs.Count > 0)
-                        {
-
-                            var firstInt = interfacs.FirstOrDefault();
-
-                            if (firstInt != null)
-                            {
-                                Register(firstInt, aImp.AsType());
-                            }
-
-                        }
-                    }
-
-                }
-
-
-
+                return (T)_cachedServices[type];
             }
+            else
+            {
+                var newType = CreateInstance<T>(type, initObjects);
+
+                _cachedServices.Add(type, newType);
+
+                return newType;
+            }
+
         }
 
         #endregion
 
-        #region Service
-
-        [Obsolete("Use Get<T>(object[]) instead")]
-        /// <summary>
-        /// Find the implementing service for the speficied interface
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="initObjects">Constructor parameter objects</param>
-        /// <returns></returns>
-        public static T Service<T>(object[] initObjects = null) => Get<T>(initObjects);
-
-        /// <summary>
-        /// Find the implementing service for the speficied interface
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="initObjects">Constructor parameter objects</param>
-        /// <returns></returns>
-         public static T Get<T>(object[] initObjects = null)
+        #region Private members
+        private static Type FindImplementation<T>()
         {
-            var typ = typeof(T);
+            Type type = null;
 
-            if (!Instance._services.ContainsKey(typ))
+            //get the request type
+            var reqType = typeof(T);
+
+            //check to see if there is an explicitly type service entry
+            if (_explicitlyTypedServices.ContainsKey(reqType))
+                type = _explicitlyTypedServices[reqType];
+
+            //if there is not explicityly type service see if there an matched type or assginable type in service types
+            if (type == null)
+                type = _serviceTypes.FirstOrDefault(x => x.Equals(reqType) || reqType.IsAssignableFrom(x));
+
+            return type;
+        }
+
+        private static Type FindImplementation(Type reqType)
+        {
+            Type type = null;
+
+            //check to see if there is an explicitly type service entry
+            if (_explicitlyTypedServices.ContainsKey(reqType))
+                type = _explicitlyTypedServices[reqType];
+
+            //if there is not explicityly type service see if there an matched type or assginable type in service types
+            if (type == null)
+                type = _serviceTypes.FirstOrDefault(x => x.Equals(reqType) || reqType.IsAssignableFrom(x));
+
+            return type;
+        }
+
+        private static void LoadServices(IEnumerable<Assembly> assemblies)
+        {
+            var custAttr = typeof(DiscoverableServiceAttribute);
+
+            foreach (var assembly in assemblies)
             {
-                throw new Exception(string.Format("There is no registered implementation for type: {0}", typ.FullName));
+                var serAttrs = assembly.GetCustomAttributes(custAttr, true);
+
+                foreach (DiscoverableServiceAttribute attrib in serAttrs)
+                {
+                    AddService(attrib.Implementation, attrib.Interface);
+
+                }
+
+
+            }
+        }
+
+        private static void AddService(Type implementationType, Type interfaceType = null, Action<object> postConstructionAction = null)
+        {
+            if (interfaceType == null)
+            {
+                if (!_serviceTypes.Contains(implementationType))
+                    _serviceTypes.Add(implementationType);
+
+                if (postConstructionAction != null)
+                {
+                    if (_constructorActions.ContainsKey(implementationType))
+                        _constructorActions[implementationType] = postConstructionAction;
+                    else
+                        _constructorActions.Add(implementationType, postConstructionAction);
+                }
+            }
+            else
+            {
+                if (!_explicitlyTypedServices.ContainsKey(interfaceType))
+                    _explicitlyTypedServices.Add(interfaceType, implementationType);
+
+                if (postConstructionAction != null)
+                {
+                    if (_constructorActions.ContainsKey(interfaceType))
+                        _constructorActions[interfaceType] = postConstructionAction;
+                    else
+                        _constructorActions.Add(interfaceType, postConstructionAction);
+                }
             }
 
-            //check to see if there is a cached element
-            if (initObjects == null && Instance.CachedServices.ContainsKey(typ))
-                return (T)Instance.CachedServices[typ];
 
-            var imp = Instance._services[typ];
 
-            var conts = imp.GetTypeInfo().GetConstructors();
-            var cachedAttribute = imp.GetTypeInfo().GetCustomAttribute<SingletonServiceAttribute>();
+        }
+
+        #endregion
+
+
+
+        #region Private
+
+        private static T CreateInstance<T>(Type type, object[] initObjects = null)
+        {
+            var conts = type.GetTypeInfo().GetConstructors();
 
             var cPars = new List<object>();
 
             if (conts.Length > 0)
             {
+
                 if (initObjects?.Length > 0)
                 {
                     foreach (var aConst in conts)
                     {
                         var pars = aConst.GetParameters();
 
-                        if (pars.Length == initObjects.Length)  //TODO:  Should probably check the type of the parameters as well where the number of parameters is the same
+                        if (pars.Length == initObjects.Length) 
                         {
                             //this is the constructor that has the same number of parameters as the initilization objects
                             foreach (var aParam in initObjects)
@@ -270,51 +282,24 @@ namespace DSoft.ServiceRegistrar
                     }
                 }
 
-            }
-            var inst = (cPars.Count == 0) ? (T)Activator.CreateInstance(imp) : (T)Activator.CreateInstance(imp, cPars.ToArray());
 
-            if (Instance._constructorActions.ContainsKey(typ))
+            }
+
+            var instance = (cPars.Count == 0) ? (T)Activator.CreateInstance(type) : (T)Activator.CreateInstance(type, cPars.ToArray());
+
+            if (_constructorActions.ContainsKey(typeof(T)))
             {
-                var action = Instance._constructorActions[typ];
-                action.Invoke(new ConstructorOptions()
-                {
-                    Context = inst
-                });
+                var action = _constructorActions[typeof(T)];
+                action.Invoke(instance);
             }
 
-            //if the impementation is cached, but not yet stored in the cache then add it to the cache
-            if ((cachedAttribute != null || Instance._singleTons.Contains(typ)) && !Instance.CachedServices.ContainsKey(typ))
-                Instance.CachedServices.Add(typ, inst);
-
-            return inst;
-
+            return instance;
         }
 
-        [Obsolete("Use Get(Type) instead")]
-        /// <summary>
-        /// Find the implementing service for the speficied interface
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public static object Service(Type type) => Get(type);
 
-        /// <summary>
-        /// Find the implementing service for the speficied interface
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public static object Get(Type type)
+        private static object CreateInstance(Type type)
         {
-            var typ = type;
-
-            if (!Instance._services.ContainsKey(typ))
-            {
-                return null;
-            }
-
-            var imp = Instance._services[typ];
-
-            var conts = imp.GetTypeInfo().GetConstructors();
+            var conts = type.GetTypeInfo().GetConstructors();
 
             var cPars = new List<object>();
 
@@ -328,72 +313,53 @@ namespace DSoft.ServiceRegistrar
                 {
                     foreach (var aPar in pars)
                     {
-                        var pType = aPar.GetType();
+                        var pType = aPar.ParameterType;
 
+                        //see if there is an implementation of the type for the parameter of the consturctor
                         var pImp = Get(pType);
 
                         if (pImp != null)
-                            cPars.Add(pImp);
+                            cPars.Add(pImp); //add as a parameter
                     }
                 }
 
             }
 
-            var inst = (cPars.Count == 0) ? Activator.CreateInstance(imp) : Activator.CreateInstance(imp, cPars.ToArray());
+            var instance = (cPars.Count == 0) ? Activator.CreateInstance(type) : Activator.CreateInstance(type, cPars.ToArray());
 
-            return inst;
-
+            return instance;
         }
 
-        #endregion
 
-        #region Private
-
-        /// <summary>
-        /// Register a service and its corresponding implementation
-        /// </summary>
-        /// <returns>The register.</returns>
-        /// <param name="sInterface">The service interface type</param>
-        /// <param name="sImplementation">The service implementation</param>
-        /// <param name="constructorAction">The constructor action to call after the instance is created</param>
-        private static void Register(Type sInterface, Type sImplementation, Action<object> constructorAction = null)
+        private static object Get(Type intefaceType)
         {
-            if (!sInterface.GetTypeInfo().IsInterface)
-                throw new ArgumentException(String.Format("You cannot register {0} as a service interface in ServiceRegistrar as it is not an interface", sInterface.FullName));
+            var type = FindImplementation(intefaceType);
 
-            if (Instance._services.ContainsKey(sInterface))
-                Instance._services[sInterface] = sImplementation;
+            //if the implentation type is null then it must not have been rergistered so through an error
+            if (type == null)
+                throw new Exception(string.Format("There is no registered implementation for type: {0}", intefaceType.Name));
+
+            var cachedAttribute = type.GetTypeInfo().GetCustomAttribute<SingletonServiceAttribute>();
+
+            if (cachedAttribute == null)
+                return CreateInstance(type);
+
+            if (_cachedServices.ContainsKey(type))
+            {
+                return _cachedServices[type];
+            }
             else
-                Instance._services.Add(sInterface, sImplementation);
-
-            if (constructorAction != null)
             {
-                if (Instance._constructorActions.ContainsKey(sInterface))
-                    Instance._constructorActions[sInterface] = constructorAction;
-                else
-                    Instance._constructorActions.Add(sInterface, constructorAction);
-            }
+                var newType = CreateInstance(type);
 
+                _cachedServices.Add(type, newType);
+
+                return newType;
+            }
 
         }
 
-
-        private static Assembly[] LoadAssemblies(List<AssemblyName> assemblyNames)
-        {
-            var assemblies = new List<Assembly>();
-
-            foreach (var aItem in assemblyNames)
-            {
-
-                var asm = Assembly.Load(aItem);
-
-                assemblies.Add(asm);
-            }
-
-            return assemblies.ToArray();
-        }
-
         #endregion
-        #endregion
+
     }
 }

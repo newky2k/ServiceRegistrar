@@ -5,7 +5,7 @@ using System.Text;
 
 namespace TestContracts
 {
-    public interface ITestInterface4 : IAutoDiscoverableProvider
+    public interface ITestInterface4
     {
         void DoAThing();
     }

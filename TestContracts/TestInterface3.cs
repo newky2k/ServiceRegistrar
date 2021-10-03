@@ -5,7 +5,7 @@ using System.Text;
 
 namespace TestContracts
 {
-    public interface TestInterface3 : IAutoDiscoverableProvider
+    public interface TestInterface3
     {
         int TestInt();
     }
