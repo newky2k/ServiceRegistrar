@@ -44,9 +44,12 @@ namespace DSoft.ServiceRegistrar
         /// <typeparam name="T">The service interface</typeparam>
         /// <typeparam name="T2">The service implementation, must implement or be a subclass of the service definition</typeparam>
         /// <param name="constructorAction">The constructor action to call after the instance is created</param>
-        public static void Register<T, T2>(Action<T2> constructorAction = null) where T2 : T
+        public static void Register<T, T2>(Action<T2> constructorAction = null) where T2 : class, T
         {
-            var executor = new Action<object>((obj) => { constructorAction((T2)obj);});
+            Action<object> executor = null;
+
+            if (constructorAction != null)
+                executor = new Action<object>((obj) => { constructorAction((T2)obj);});
 
             Register(typeof(T), typeof(T2), executor);
         }
@@ -57,10 +60,12 @@ namespace DSoft.ServiceRegistrar
         /// <typeparam name="T">The service interface</typeparam>
         /// <typeparam name="T2">The service implementation, must implement or be a subclass of the service definition</typeparam>
         /// <param name="constructorAction">The constructor action to call after the instance is created</param>
-        public static void RegisterSingleTon<T, T2>(Action<T2> constructorAction = null) where T2 : T
+        public static void RegisterSingleTon<T, T2>(Action<T2> constructorAction = null) where T2 : class, T
         {
-            var executor = new Action<object>((obj) => { constructorAction((T2)obj); });
+            Action<object> executor = null;
 
+            if (constructorAction != null)
+                executor = new Action<object>((obj) => { constructorAction((T2)obj); });
 
             Register(typeof(T), typeof(T2), executor);
 
@@ -74,14 +79,7 @@ namespace DSoft.ServiceRegistrar
         /// </summary>
         /// <typeparam name="T">A type from the assembly with the service interfaces</typeparam>
         /// <typeparam name="T2">A type from the assembly with the service implmentations</typeparam>
-        public static void RegisterFromAssemblies<T, T2>()
-        {
-            //find all the interfaces that implement the base interface first
-            var siAssembly = typeof(T).GetTypeInfo().Assembly;
-            var impAssembly = typeof(T2).GetTypeInfo().Assembly;
-
-            RegisterFromAssemblies(siAssembly, impAssembly);
-        }
+        public static void RegisterFromAssemblies<T, T2>() => RegisterFromAssemblies(typeof(T).GetTypeInfo().Assembly, typeof(T2).GetTypeInfo().Assembly);
 
         /// <summary>
         /// Register service interfaces and implementations from the assemblies with the registra
@@ -111,27 +109,50 @@ namespace DSoft.ServiceRegistrar
         /// Register the calling assembly as the implementation assembly
         /// </summary>
         /// <typeparam name="T">The interface to find implementations of</typeparam>
-        public static void RegisterFromCallingAssembly<T>()
-        {
-            //find all the interfaces that implement the base interface first
-
-            var impAssembly = Assembly.GetCallingAssembly();
-
-            var siAssembly = typeof(T).GetTypeInfo().Assembly;
-
-            RegisterFromAssemblies(siAssembly, impAssembly);
-        }
+        public static void RegisterFromCallingAssembly<T>() => RegisterFromAssemblies(typeof(T).GetTypeInfo().Assembly, Assembly.GetCallingAssembly());
 
         /// <summary>
         /// Register the calling assembly as the implementation assembly
         /// </summary>
         /// <param name="interfaces">the interfaces assembly</param>
-        public static void RegisterFromCallingAssembly(Assembly interfaceAssembly)
-        {
-            var assm = Assembly.GetCallingAssembly();
+        public static void RegisterFromCallingAssembly(Assembly interfaceAssembly) => RegisterFromAssemblies(interfaceAssembly, Assembly.GetCallingAssembly());
 
-            RegisterFromAssemblies(interfaceAssembly, assm);
+
+
+        /// <summary>
+        /// Register the assmebly and process referenced assemblie to auto-discover implementations of interfaces that inherit from IAutoDiscoverableProvider
+        /// 
+        /// Note: Linking may remove unused references so they will not loaded
+        /// </summary>
+        /// <param name="assm"></param>
+        public static void RegisterWithAutoDiscovery(Assembly assm)
+        {
+            var getAsssmMeths = assm.GetType().GetTypeInfo().GetDeclaredMethods("GetReferencedAssemblies").ToList();
+
+            if (getAsssmMeths == null && getAsssmMeths.Count == 0)
+                throw new Exception("Unable to call GetReferencedAssessmblies on the Assembly object passed to ServiceRegistrar.RegisterWithAutoDiscovery");
+
+            var methods = getAsssmMeths.Where(x => x.IsPublic.Equals(true)).ToList();
+
+            if (methods.Count == 0)
+                throw new Exception("Unable to call the Public method GetReferencedAssessmblies on the Assembly object passed to ServiceRegistrar.RegisterWithAutoDiscovery");
+
+            var firMethd = methods.First();
+
+            var assms = (AssemblyName[])firMethd.Invoke(assm, null);
+
+            var newAssms = new List<AssemblyName>() { assm.GetName() };
+            newAssms.AddRange(assms);
+
+            var loadedAssms = LoadAssemblies(newAssms);
+
+            RegisterWithAutoDiscovery(loadedAssms);
         }
+
+        /// <summary>
+        /// Registers the calling assembly and auto-discovers implementations of interfaces that inherit from IAutoDiscoverableProvider
+        /// </summary>
+        public static void RegisterWithAutoDiscovery() => RegisterWithAutoDiscovery(Assembly.GetCallingAssembly());
 
         /// <summary>
         /// Register the assmeblies array and auto-discovers implementations of interfaces that inherit from IAutoDiscoverableProvider
@@ -173,49 +194,18 @@ namespace DSoft.ServiceRegistrar
             }
         }
 
-        /// <summary>
-        /// Register the assmebly and process referenced assemblie to auto-discover implementations of interfaces that inherit from IAutoDiscoverableProvider
-        /// 
-        /// Note: Linking may remove unused references so they will not loaded
-        /// </summary>
-        /// <param name="assm"></param>
-        public static void RegisterWithAutoDiscovery(Assembly assm)
-        {
-            var getAsssmMeths = assm.GetType().GetTypeInfo().GetDeclaredMethods("GetReferencedAssemblies").ToList();
-
-            if (getAsssmMeths == null && getAsssmMeths.Count == 0)
-                throw new Exception("Unable to call GetReferencedAssessmblies on the Assembly object passed to ServiceRegistrar.RegisterWithAutoDiscovery");
-
-            var methods = getAsssmMeths.Where(x => x.IsPublic.Equals(true)).ToList();
-
-            if (methods.Count == 0)
-                throw new Exception("Unable to call the Public method GetReferencedAssessmblies on the Assembly object passed to ServiceRegistrar.RegisterWithAutoDiscovery");
-
-            var firMethd = methods.First();
-
-            var assms = (AssemblyName[])firMethd.Invoke(assm, null);
-
-            var newAssms = new List<AssemblyName>() { assm.GetName() };
-            newAssms.AddRange(assms);
-
-            var loadedAssms = LoadAssemblies(newAssms);
-
-            RegisterWithAutoDiscovery(loadedAssms);
-        }
-
-        /// <summary>
-        /// Registers the calling assembly and auto-discovers implementations of interfaces that inherit from IAutoDiscoverableProvider
-        /// </summary>
-        public static void RegisterWithAutoDiscovery()
-        {
-            var impAssembly = Assembly.GetCallingAssembly();
-
-            RegisterWithAutoDiscovery(impAssembly);
-        }
-
         #endregion
 
         #region Service
+
+        [Obsolete("Use Get<T>(object[]) instead")]
+        /// <summary>
+        /// Find the implementing service for the speficied interface
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="initObjects">Constructor parameter objects</param>
+        /// <returns></returns>
+        public static T Service<T>(object[] initObjects = null) => Get<T>(initObjects);
 
         /// <summary>
         /// Find the implementing service for the speficied interface
@@ -223,7 +213,7 @@ namespace DSoft.ServiceRegistrar
         /// <typeparam name="T"></typeparam>
         /// <param name="initObjects">Constructor parameter objects</param>
         /// <returns></returns>
-        public static T Service<T>(object[] initObjects = null)
+         public static T Get<T>(object[] initObjects = null)
         {
             var typ = typeof(T);
 
@@ -272,7 +262,7 @@ namespace DSoft.ServiceRegistrar
                             var pType = aPar.ParameterType;
 
                             //see if there is an implementation of the type for the parameter of the consturctor
-                            var pImp = Service(pType);
+                            var pImp = Get(pType);
 
                             if (pImp != null)
                                 cPars.Add(pImp); //add as a parameter
@@ -300,12 +290,20 @@ namespace DSoft.ServiceRegistrar
 
         }
 
+        [Obsolete("Use Get(Type) instead")]
         /// <summary>
         /// Find the implementing service for the speficied interface
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public static object Service(Type type)
+        public static object Service(Type type) => Get(type);
+
+        /// <summary>
+        /// Find the implementing service for the speficied interface
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public static object Get(Type type)
         {
             var typ = type;
 
@@ -332,7 +330,7 @@ namespace DSoft.ServiceRegistrar
                     {
                         var pType = aPar.GetType();
 
-                        var pImp = Service(pType);
+                        var pImp = Get(pType);
 
                         if (pImp != null)
                             cPars.Add(pImp);
@@ -345,21 +343,6 @@ namespace DSoft.ServiceRegistrar
 
             return inst;
 
-        }
-
-        private static Assembly[] LoadAssemblies(List<AssemblyName> assemblyNames)
-        {
-            var assemblies = new List<Assembly>();
-
-            foreach (var aItem in assemblyNames)
-            {
-
-                var asm = Assembly.Load(aItem);
-
-                assemblies.Add(asm);
-            }
-
-            return assemblies.ToArray();
         }
 
         #endregion
@@ -392,6 +375,22 @@ namespace DSoft.ServiceRegistrar
             }
 
 
+        }
+
+
+        private static Assembly[] LoadAssemblies(List<AssemblyName> assemblyNames)
+        {
+            var assemblies = new List<Assembly>();
+
+            foreach (var aItem in assemblyNames)
+            {
+
+                var asm = Assembly.Load(aItem);
+
+                assemblies.Add(asm);
+            }
+
+            return assemblies.ToArray();
         }
 
         #endregion

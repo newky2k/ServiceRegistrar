@@ -1,5 +1,4 @@
-﻿using DSoft.ServiceRegistra;
-using DSoft.ServiceRegistrar;
+﻿using DSoft.ServiceRegistrar;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,7 +18,7 @@ namespace TestHarness
 
             ServiceRegistrar.Register<ITestInterface4, TestImplementation4>(obj =>
             {
-                ((TestImplementation4)obj.Context).Message = "Hello, init!";
+                obj.Message = "Hello, init!";
             });
 
             //this should call the constructor action
@@ -27,18 +26,18 @@ namespace TestHarness
 
             ServiceRegistrar.RegisterWithAutoDiscovery(typeof(TestImplementation2).Assembly);
 
-            var serv4 = ServiceRegistrar.Service<ITestInterface4>();
+            var serv4 = ServiceRegistrar.Get<ITestInterface4>();
 
             serv4.DoAThing();
-            ServiceRegistrar.Service<ITestInterface4>().DoAThing();
+            ServiceRegistrar.Get<ITestInterface4>().DoAThing();
 
             var imps = ServiceRegistrar.Instance.Services;
 
-            var serv = ServiceRegistrar.Service<ITestInterface2>();
+            var serv = ServiceRegistrar.Get<ITestInterface2>();
 
             var result = serv.TestInt();
 
-            var serv2 = ServiceRegistrar.Service<TestInterface3>(new object[] { serv });
+            var serv2 = ServiceRegistrar.Get<TestInterface3>(new object[] { serv });
 
 
             Console.WriteLine(result);
