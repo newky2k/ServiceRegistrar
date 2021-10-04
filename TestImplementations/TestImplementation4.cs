@@ -7,6 +7,7 @@ using TestImplementations;
 
 namespace TestImplementations
 {
+    
     public class TestImplementation4 : ITestInterface4
     {
         public string Message { get; set; }

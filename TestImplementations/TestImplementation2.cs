@@ -8,6 +8,7 @@ using TestImplementations;
 [assembly: DiscoverableServiceAttribute(typeof(ITestInterface2), typeof(TestImplementation2))]
 namespace TestImplementations
 {
+    [SingletonService]
     public class TestImplementation2 : ITestInterface2
     {
         public int TestInt()
