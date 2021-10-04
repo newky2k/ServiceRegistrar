@@ -5,7 +5,7 @@ using System.Text;
 using TestContracts;
 using TestImplementations;
 
-[assembly: DiscoverableServiceAttribute(typeof(TestInterface3), typeof(TestImplementation3))]
+[assembly: DiscoverableService(typeof(TestInterface3), typeof(TestImplementation3))]
 namespace TestImplementations
 {
     public class TestImplementation3 : TestInterface3

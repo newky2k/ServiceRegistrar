@@ -5,85 +5,135 @@ Dependency injection and service registration container
 Features:
 
 - Simple service registration
-  - Register Singletons
 - Dependency injection of registered services during instantiation
   - Passing of initialization parameters
   - Post-Instantiation actions 
 - Auto Discovery using reflection
-  - Auto-Register singleton implementations using `SingletonServiceAttribute`
-- .NET Standard 2.0 
+  - Auto-Discover service implementations with and assembly using `DiscoverableServiceAttribute`
+  - Register a service a singleton using `SingletonServiceAttribute`
+- .NET Standard 2.0 and .NET 5.0
+
+## Version 2.0 - Breaking Changes
+
+The core ServiceRegistra class has been rewritten, ported from the Services class in DSoft.System.Mvvm, and extended with Dependecy Injection, post construction cctions and initialisation objects.
+
+Additionally the main class has been renamed from `ServiceRegistra` to `Services` to avoid naming confusion with the main namespace.
+
+The API is all different from previous version and has been simplified.
+
+`IAutoDiscoverableProvider` has been removed and auto-discovery is done using `DiscoverableServiceAttribute`
+
+`ConstructorOptions` has been removed and the instantiated service instance is passed straight to the post construction action
 
 ## Usage
 
-### AutoDiscovery
-`ServiceRegistrar.RegisterWithAutoDiscovery` will process the specified assembly to auto-register any implementations of any interfaces that inherit from `IAutoDiscoverableProvider`
-
-    using DSoft.ServiceRegistrar;
-    ...
-    ServiceRegistrar.RegisterWithAutoDiscovery(typeof(TestImplementation2).Assembly);
-
-**Note: if the implementation class is decorated with the `SingletonServiceAttribute` then it will configured as a singleton and cached after the first instantiation.**
-
-### Register Implementations in an Assembly
-There are several methods for registering the implementations contained within assemblies.
-
-These are:
-
-- `ServiceRegistrar.RegisterFromAssemblies(Assembly interfaces, Assembly implementations)`
-  - Registers the implementations in the implementations assembly that implements the interfaces in the interfaces assembly
-- `ServiceRegistrar.RegisterFromAssemblies<T, T2>()`
-  - Registers the implementations in the assembly containing the type of `T2` that implements the interfaces in the assembly that contains the type of `T`
-- `ServiceRegistrar.RegisterFromCallingAssembly(Assembly interfaceAssembly)`
-    - Processes the calling assembly and matches implementations of any matching interfaces in the interfaces assembly
-- `ServiceRegistrar.RegisterFromCallingAssembly<T>()`
-    - Processes the calling assembly and matches implementations of any matching interfaces in the interfaces assembly containing `T`
-
-**Note: if the implementation class is decorated with the `SingletonServiceAttribute` then it will configured as a singleton and cached after the first instantiation.**
-
 ### Register
 
-You can register an individual interface/implementation combination using `ServiceRegistrar.Register<T,T2>()`
+`ServiceRegistra.Services` provider three overloads for the `Register` method used to register interfaces and service implmentations with the system.
+
+- Register<T>(Action<T> postConstructionAction = null)
+  - Registers an implementation class only
+    - Takes an optional post contstruction action to run on the newly instatiated instance 
+- Register<T, T2>(Action<T2> postConstructionAction = null)
+  - Registers an interface and implementation class
+    - Takes an optional post contstruction action to run on the newly instatiated instance 
+- Register(Assembly[])
+  - Processes an array of assemblies and uses auto-discovery to register interace and implementation pairs(detailed below)
+
+#### Register<T>(Action<T> postConstructionAction = null)
+
+You can register an implementation class only using `Services.Register<T>()`
 
     using DSoft.ServiceRegistrar;
     ...
-    ServiceRegistrar.Register<ITestInterface4, TestImplementation4>();
+    Services.Register<TestImplementation4>();
 
 You can also specify a post-construcion action to execute after the implementation has been instantiated.
 
     using DSoft.ServiceRegistrar;
     ...
-    ServiceRegistrar.Register<ITestInterface4, TestImplementation4>(obj =>
+    Services.Register<TestImplementation4>(obj =>
+            {
+                obj.Message = "Hello, init!";
+            });
+
+#### Register<T, T2>(Action<T2> postConstructionAction = null)
+
+You can register an individual interface/implementation combination using `Services.Register<T,T2>()`
+
+    using DSoft.ServiceRegistrar;
+    ...
+    Services.Register<ITestInterface4, TestImplementation4>();
+
+You can also specify a post-construcion action to execute after the implementation has been instantiated.
+
+    using DSoft.ServiceRegistrar;
+    ...
+    Services.Register<ITestInterface4, TestImplementation4>(obj =>
             {
                 ((TestImplementation4)obj.Context).Message = "Hello, init!";
             });
 
-You can also register a singleton instance using `ServiceRegistrar.RegisterSingleton<T,T2>()`, with or without a post-construcion action.
+#### Register(Assembly[])  
+
+`Services.Register(Assembly[])` will process the specified assemblies to find instances of the `DiscoverableServiceAttribute` attribute and register them with the system.
+
+`DiscoverableServiceAttribute` can be included anywhere in the assembly or within the class definition itself.
 
     using DSoft.ServiceRegistrar;
     ...
-    ServiceRegistrar.RegisterSingleton<ITestInterface4, TestImplementation4>(obj =>
+
+    [assembly: DiscoverableServiceAttribute(typeof(ITestInterface1), typeof(TestImplementation1))]
+    namespace TestImplementations
+    {
+        public class TestImplementation1 : ITestInterface1
+        {
+            public int TestInt()
             {
-                ((TestImplementation4)obj.Context).Message = "Hello, init!";
-            });
+                return 1;
+            }
+        }
+    }
 
 
-### Service
-To access the implementation of a interface you call `ServiceRegistrar.Service<T>()`.  This will return an instance of the implementation of the interface.  
+**Note: if the implementation class is decorated with the `SingletonServiceAttribute` then it will configured as a singleton and cached after the first instantiation.**
+
+#### Singletons
+
+You can resgiter a implementation class as a singleton by adding the `SingletonServiceAttribute` attribute to the class definition either through `Services.Register<T>()`, `Services.Register<T,T2>()` or `Services.Register(Assembly[])`
 
     using DSoft.ServiceRegistrar;
     ...
-    var serv4 = ServiceRegistrar.Service<ITestInterface4>();
+
+    [SingletonService]
+    public class TestImplementation2 : ITestInterface2
+    {
+        public int TestInt()
+        {
+            return 2;
+        }
+    }
+
+**Note: if the implementation class is decorated with the `SingletonServiceAttribute` then it will configured as a singleton and cached after the first instantiation**
+ 
+
+### Get
+To access the implementation of a interface you call `Services.Get<T>()`.  This will return an instance of the implementation of the interface.  
+
+    using DSoft.ServiceRegistrar;
+    ...
+    var serv4 = Services.Get<ITestInterface4>();
     serv4.DoAThing();
 
 You can also pass through initialisation objects that can be passed to a matching constructor within the implementation class.
 
     using DSoft.ServiceRegistrar;
     ...
-    var serv = ServiceRegistrar.Service<ITestInterface2>();
+    var serv = Services.Get<ITestInterface2>();
 
     var result = serv.TestInt();
 
-    var serv2 = ServiceRegistrar.Service<TestInterface3>(new object[] { serv });
+    var serv2 = Services.Get<TestInterface3>(new object[] { serv });
 
 *If the service is a singleton and a post-construcion action is defined, it will be executed the first time the implementation is instantiated.*
 
@@ -95,6 +145,6 @@ ServiceRegistrar can inject dependencies from other registered interface impleme
 - Each implementating class, that is being injected, can have only one constructor that:
   - Either has no parameters 
   - Or references other registered interface implementations
-- Will not work with intitilization objects in `ServiceRegistrar.Service<T>()`
+- Dependency Injection is ignored if intitilization objects are passed to `Services.Get<T>()`
 
 **Note: Work will be done on the Depdency Injection to remove some of the limitations**
