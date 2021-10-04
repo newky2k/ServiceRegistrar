@@ -8,7 +8,7 @@ namespace DSoft.ServiceRegistrar
     /// <summary>
     /// Dependency Injection and Service Management Container
     /// </summary>
-    public class ServiceRegistrar
+    public class Services
     {
 
         #region Fields
@@ -233,8 +233,6 @@ namespace DSoft.ServiceRegistrar
         }
 
         #endregion
-
-
 
         #region Private
 
