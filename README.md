@@ -11,7 +11,7 @@ Features:
 - Auto Discovery using reflection
   - Auto-Discover service implementations with and assembly using `DiscoverableServiceAttribute`
   - Register a service a singleton using `SingletonServiceAttribute`
-- .NET Standard 2.0 and .NET 5.0
+- .NET Standard 2.0 and .NET 6.0, 8.0 and 9.0
 
 ## Version 2.0 - Breaking Changes
 
