@@ -15,10 +15,10 @@ variables:
 
 steps:
 - task: UseDotNet@2
-  displayName: Install .Net 5.x
+  displayName: Install .Net 9.x
   inputs:
     packageType: 'sdk'
-    version: '5.0.x'
+    version: '9.x'
   
 - task: NuGetToolInstaller@1
   displayName: Install Latest Nuget

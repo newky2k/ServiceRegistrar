@@ -56,19 +56,20 @@ namespace DSoft.ServiceRegistrar
 
         }
 
+
         /// <summary>
-        /// Registers the interface and implementation type
+        /// Registers the specified post construction action.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <typeparam name="T2">The type of the 2.</typeparam>
-        /// <exception cref="Exception">The first type must be an interface when calling Resgister<T,T2></exception>
+        /// <typeparam name="T">The interface type.</typeparam>
+        /// <typeparam name="T2">The implementation type.</typeparam>
+        /// <param name="postConstructionAction">The post construction action.</param>
+        /// <exception cref="Exception">The first type must be an interface when calling Register&lt;T,T2&gt;.</exception>
         public static void Register<T, T2>(Action<T2> postConstructionAction = null) where T2 : class, new()
         {
             var interfaceType = typeof(T);
 
             if (!interfaceType.IsInterface)
                 throw new Exception("The first type must be an interface when calling Register<T,T2>");
-
 
             var implementationType = typeof(T2);
 
@@ -78,7 +79,6 @@ namespace DSoft.ServiceRegistrar
                 executor = new Action<object>((obj) => { postConstructionAction((T2)obj); });
 
             AddService(implementationType, interfaceType, executor);
-
         }
 
         /// <summary>

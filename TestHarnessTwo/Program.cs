@@ -1,20 +1,13 @@
 ﻿using DSoft.ServiceRegistrar;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using TestContracts;
 using TestImplementations;
 
-namespace TestHarness
+namespace TestHarnessTwo
 {
-    class Program
+    internal class Program
     {
         static void Main(string[] args)
         {
-
             Services.Register<ITestInterface4, TestImplementation4>(obj =>
             {
                 obj.Message = "Hello, init!";
