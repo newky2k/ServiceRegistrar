@@ -1,5 +1,5 @@
 # Release: on every push to main, builds Release and pushes the DSoft.ServiceRegistrar package
-# to nuget.org as 1.3.yyMM.<run number>, then tags the commit and
+# to nuget.org as 2.2.yyMM.<run number>, then tags the commit and
 # creates a GitHub release with the packages attached.
 # RELEASE_SUFFIX is empty for a stable version; set it to a suffix such as
 # '-prerelease' to publish a prerelease.
@@ -44,7 +44,7 @@ jobs:
         id: version
         shell: bash
         run: |
-          version="1.3.$(date -u +%y%m).${{ github.run_number }}"
+          version="2.2.$(date -u +%y%m).${{ github.run_number }}"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "package=$version$RELEASE_SUFFIX" >> "$GITHUB_OUTPUT"
           echo "Version: $version$RELEASE_SUFFIX"

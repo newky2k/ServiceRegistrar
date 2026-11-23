@@ -32,4 +32,4 @@ dotnet TestHarnessTwo/bin/Release/net10.0/TestHarnessTwo.dll </dev/null
 GitHub Actions (`.github/workflows/`) on `windows-latest`:
 
 - `ci.yml` builds Release for pull requests into `main` and `development`; it publishes nothing.
-- `release.yml` runs on every push to `main` (changes only to Markdown or workflow files are skipped; run it by hand to test a workflow change). It builds Release as `1.3.<yyMM>.<run number>` plus `RELEASE_SUFFIX` (empty for a stable version), pushes `DSoft.ServiceRegistrar` to nuget.org with Trusted Publishing (OIDC, `NUGET_USER` secret, `nuget` environment), then tags the commit `v<version>` and creates a GitHub release with the package attached.
+- `release.yml` runs on every push to `main` (changes only to Markdown or workflow files are skipped; run it by hand to test a workflow change). It builds Release as `2.2.<yyMM>.<run number>` plus `RELEASE_SUFFIX` (empty for a stable version), pushes `DSoft.ServiceRegistrar` to nuget.org with Trusted Publishing (OIDC, `NUGET_USER` secret, `nuget` environment), then tags the commit `v<version>` and creates a GitHub release with the package attached.
