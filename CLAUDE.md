@@ -18,7 +18,7 @@ dotnet build ServiceRegistra.sln -c Release
 dotnet TestHarnessTwo/bin/Release/net10.0/TestHarnessTwo.dll </dev/null
 ```
 
-- The library multi-targets `netstandard2.0;net6.0;net8.0;net9.0;net10.0;net11.0` and has no package dependencies. Build with the .NET 10 and .NET 11 SDKs (`global.json` rolls forward to the latest major).
+- The library multi-targets `netstandard2.0;net10.0;net11.0` and has no package dependencies. Build with the .NET 10 and .NET 11 SDKs (`global.json` rolls forward to the latest major).
 - `GeneratePackageOnBuild=true` (`Directory.Build.props`), so every build produces `.nupkg` files (the library's has `README.md` and `DSIcon.png`). Release builds add SourceLink.
 - Assemblies are strong-name signed with `DSoft.ServiceRegistrar/DSoft.snk`; do not remove it.
 
